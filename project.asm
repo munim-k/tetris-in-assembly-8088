@@ -4,13 +4,13 @@ jmp start
 
 next_shape: db 'NEXT SHAPE'
 score_text: db 'SCORE'
-score: db '0000'
+score: db '6969'
 time_text: db 'TIME'
-time: db '00:00'
+time: db '04:44'
 shape: db ' '
 color: db 40
 xpos: dd 62
-ypos: dd 18
+ypos: dd 17
 
 clearscreen:
 push es
@@ -111,7 +111,7 @@ mov cx,78
 cld
 rep stosw
 
-mov di,2510
+mov di,2190
 mov al,'-'                       ;segment partition line
 mov ah,0x000000
 mov cx,23
@@ -132,7 +132,7 @@ cmp si,18
 jbe play_area
 
 
-mov ax,64
+mov ax,65
 push ax
 mov ax,3
 push ax
@@ -143,7 +143,7 @@ push ax
 push 5
 call print
 
-mov di,840
+mov di,680
 mov al,' '
 mov ah,0
 mov si,0
@@ -156,9 +156,35 @@ inc si
 cmp si,5
 jbe score_area
 
+
+mov ax,62
+push ax
+mov ax,15
+push ax
+mov ax,120
+push ax                              ;next shape text
+mov ax,next_shape
+push ax
+push 10
+call print
+
+
+mov di, 2680
+mov al, ' '
+mov ah, 0
+mov si, 0
+nextshape_area:
+mov cx,15                          ;next shape black area
+cld
+rep stosw
+add di,50
+inc si
+cmp si,10
+jbe nextshape_area
+
 mov ax,65
 push ax
-mov ax,6
+mov ax,5
 push ax
 mov ax,07                 ;sample score
 push ax
@@ -169,7 +195,7 @@ call print
 
 mov ax,65
 push ax
-mov ax,9
+mov ax,8
 push ax
 mov ax,120
 push ax                              ;time text
@@ -178,7 +204,7 @@ push ax
 push 4
 call print
 
-mov di,1800
+mov di,1480
 mov al,' '
 mov ah,0
 mov si,0
@@ -193,7 +219,7 @@ jbe time_area
 
 mov ax,65
 push ax
-mov ax,12
+mov ax,10
 push ax
 mov ax,07                 ;sample time
 push ax
@@ -314,6 +340,58 @@ jne tallloop
 
 
 
+
+
+pop cx
+pop di
+pop es
+pop ax
+pop bp
+ret
+
+
+
+shape3:
+
+push bp
+mov bp, sp
+push ax
+push es
+push di
+push cx
+
+mov ax, 0xb800
+mov es, ax
+mov al, 80
+mul byte [bp+4] ;ypos
+add ax, [bp+6] ;xpos
+shl ax, 1
+mov di, ax
+mov al, [shape]
+mov ah, [bp+8] ;attribute
+
+mov dx, 2
+linerepeat:
+
+mov cx, 16 
+lineloopC:
+
+mov [es:di], ax
+add di, 2
+
+loop lineloopC
+
+add di, 128
+dec dx
+cmp dx, 0
+jne linerepeat
+
+
+
+
+
+
+
 pop cx
 pop di
 pop es
@@ -347,6 +425,15 @@ mov ax, 7			;ypos
 push ax
 
 call shape2
+
+mov ax, 90			;color
+push ax
+mov ax, 5			;xpos
+push ax,
+mov ax, 20			;ypos
+push ax
+
+call shape3
 
 
 mov ax, 0x4c00
