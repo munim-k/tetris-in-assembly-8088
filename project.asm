@@ -1,10 +1,16 @@
 org 100h
 jmp start
 
+
+next_shape: db 'NEXT SHAPE'
 score_text: db 'SCORE'
 score: db '0000'
 time_text: db 'TIME'
 time: db '00:00'
+shape: db ' '
+color: db 40
+xpos: dd 62
+ypos: dd 18
 
 clearscreen:
 push es
@@ -205,6 +211,118 @@ pop es
 ret
 
 
+shape1:
+push bp
+mov bp, sp
+push ax
+push es
+push di
+push cx
+
+mov ax, 0xb800
+mov es, ax
+mov al, 80
+mul byte [bp+4] ;ypos
+add ax, [bp+6] ;xpos
+shl ax, 1
+mov di, ax
+mov al, [shape]
+mov ah, [bp+8] ;attribute
+
+
+mov cx, 12 
+lineloop:
+
+mov [es:di], ax
+add di, 2
+
+loop lineloop
+
+add di, 136
+
+mov cx, 12
+lineloop2:
+
+mov [es:di], ax
+add di, 2
+
+loop lineloop2
+
+add di, 136
+
+mov cx, 4
+lineloop3:
+
+mov [es:di], ax
+add di, 2
+
+loop lineloop3
+
+add di, 152
+
+mov cx, 4
+lineloop4:
+
+mov [es:di], ax
+add di, 2
+
+loop lineloop4
+
+pop cx
+pop di
+pop es
+pop ax
+pop bp
+ret
+
+
+shape2:
+
+push bp
+mov bp, sp
+push ax
+push es
+push di
+push cx
+
+mov ax, 0xb800
+mov es, ax
+mov al, 80
+mul byte [bp+4] ;ypos
+add ax, [bp+6] ;xpos
+shl ax, 1
+mov di, ax
+mov al, [shape]
+mov ah, [bp+8] ;attribute
+
+xor bx, bx
+mov bx, 8
+tallloop:
+
+mov cx, 4 
+lineloopB:
+
+mov [es:di], ax
+add di, 2
+
+loop lineloopB
+
+add di, 152
+dec bx
+cmp bx, 0
+jne tallloop
+
+
+
+pop cx
+pop di
+pop es
+pop ax
+pop bp
+ret
+
+
+
 
 
 
@@ -212,6 +330,24 @@ start:
 call clearscreen
 call draw_play_area
 
+mov ax, [color]		;range from 10, 20, 30, 40, 50, 60, 70
+push ax
+mov ax, [xpos]
+push ax
+mov ax, [ypos]
+push ax
+
+call shape1
+
+mov ax, 60			;color
+push ax
+mov ax, 33			;xpos
+push ax
+mov ax, 7			;ypos
+push ax
+
+call shape2
 
 
-
+mov ax, 0x4c00
+int 0x21
