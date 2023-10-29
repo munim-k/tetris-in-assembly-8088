@@ -1,11 +1,11 @@
 org 100h
 jmp start
 
-
+game_over_text: db 'GAME OVER'
 next_shape: db 'NEXT SHAPE'
-score_text: db 'SCORE'
+score_text: db 'SCORE:'
 score: db '6969'
-time_text: db 'TIME'
+time_text: db 'TIME:'
 time: db '04:44'
 shape: db ' '
 color: db 40
@@ -66,6 +66,83 @@ pop ax
 pop es
 pop bp
 ret 10
+
+draw_end_screen:
+
+
+mov ax,0xb800
+mov es,ax
+
+mov di,978
+mov al,' '
+mov ah,70
+mov si,0
+end_area:
+mov cx,40
+cld                                 ;end screen area red box
+rep stosw
+add di,80
+inc si
+cmp si,10
+jbe end_area
+
+mov ax,24
+push ax
+mov ax,7
+push ax
+mov ax,11001111b
+push ax                              ;game over text
+mov ax,game_over_text
+push ax
+push 9
+call print
+
+mov ax,23
+push ax
+mov ax,10
+push ax
+mov ax,01001111b
+push ax                              ;score game over text
+mov ax,score_text
+push ax
+push 6
+call print
+
+mov ax,30
+push ax
+mov ax,10
+push ax
+mov ax,01001111b
+push ax                              ;score game over text
+mov ax,score
+push ax
+push 4
+call print
+
+mov ax,23
+push ax
+mov ax,12
+push ax
+mov ax,01001111b
+push ax                              ;time game over text
+mov ax,time_text
+push ax
+push 5
+call print
+
+mov ax,30
+push ax
+mov ax,12
+push ax
+mov ax,01001111b
+push ax                              ;time game over 
+mov ax,time
+push ax
+push 6
+call print
+
+ret
+
 
 draw_play_area:
 push es
@@ -434,7 +511,7 @@ mov ax, 20			;ypos
 push ax
 
 call shape3
-
+;call draw_end_screen                         //call subroutine to end game
 
 mov ax, 0x4c00
 int 0x21
