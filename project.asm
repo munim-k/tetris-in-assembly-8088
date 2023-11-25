@@ -11,6 +11,99 @@ shape: db ' '
 color: db 40
 xpos: dd 62
 ypos: dd 17
+oldisr: dd 0 
+tickcount: dw 0
+seconds: dw 0
+minutes: dw 0
+
+
+kbisr: 
+push ax
+ push es
+ mov ax, 0xb800
+ mov es, ax 
+ in al, 0x60 
+ cmp al, 0x4b 
+ jne nextcmp 
+ mov byte [es:0], 'L' 
+ jmp nomatch 
+nextcmp:
+ cmp al, 0x4d 
+ jne nomatch
+ mov byte [es:0], 'R' 
+nomatch:
+ pop es
+ pop ax
+ jmp far [cs:oldisr] 
+
+printnum: 
+push bp
+ mov bp, sp
+ push es
+ push ax
+ push bx
+ push cx
+ push dx
+ push di
+ mov ax, 0xb800
+ mov es, ax 
+ mov ax, [bp+4] 
+ mov bx, 10 
+ mov cx, 0
+nextdigit: mov dx, 0 
+ div bx 
+ add dl, 0x30 
+ push dx
+ inc cx 
+ cmp ax, 0
+ jnz nextdigit 
+ mov di, [bp+6]
+nextpos: pop dx 
+ mov dh, 0x07 
+ mov [es:di], dx
+ add di, 2 
+ loop nextpos 
+ pop di
+ pop dx
+ pop cx
+ pop bx
+ pop ax 
+ pop es
+ pop bp
+ ret 4
+ 
+nextminute:
+inc word [minutes]
+mov word [seconds],0
+push 1730
+push word [minutes]
+call printnum
+jmp _jmpback
+
+nextsecond:
+ inc word [seconds]
+ push 1740
+ push word [seconds]
+ call printnum
+ mov word [cs:tickcount],0
+ jmp jmpback
+timer:
+ push ax
+ inc word [cs:tickcount]
+ cmp word [cs:tickcount],18
+ jge nextsecond
+ jmpback:
+ cmp word [seconds],59
+ jge nextminute
+ _jmpback:
+  
+  
+  
+ mov al, 0x20
+ out 0x20, al
+ 
+ pop ax
+ iret 
 
 clearscreen:
 push es
@@ -294,16 +387,16 @@ inc si
 cmp si,5
 jbe time_area
 
-mov ax,65
-push ax
-mov ax,10
-push ax
-mov ax,07                 ;sample time
-push ax
-mov ax,time
-push ax
-push 5
-call print
+; mov ax,65
+; push ax
+; mov ax,10
+; push ax
+; mov ax,07                 ;sample time
+; push ax
+; mov ax,time
+; push ax
+; push 5
+; call print
 
 
 pop si
@@ -463,12 +556,6 @@ dec dx
 cmp dx, 0
 jne linerepeat
 
-
-
-
-
-
-
 pop cx
 pop di
 pop es
@@ -476,13 +563,25 @@ pop ax
 pop bp
 ret
 
-
-
-
-
-
 start:
 call clearscreen
+xor ax, ax
+ mov es, ax ; point es to IVT base
+ cli ; disable interrupts
+ mov word [es:8*4], timer; store offset at n*4
+ mov [es:8*4+2], cs ; store segment at n*4+2
+ sti
+
+ xor ax, ax
+ mov es, ax 
+ mov ax, [es:9*4]
+ mov [oldisr], ax 
+ mov ax, [es:9*4+2]
+ mov [oldisr+2], ax 
+ cli 
+ mov word [es:9*4], kbisr 
+ mov [es:9*4+2], cs 
+ sti 
 call draw_play_area
 
 mov ax, [color]		;range from 10, 20, 30, 40, 50, 60, 70
@@ -511,7 +610,7 @@ mov ax, 20			;ypos
 push ax
 
 call shape3
-;call draw_end_screen                         //call subroutine to end game
+;call draw_end_screen                         ;call subroutine to end game
 
 mov ax, 0x4c00
 int 0x21
