@@ -8,9 +8,149 @@ score: db '6969'
 time_text: db 'TIME'
 time: db '04:44'
 shape: db ' '
-color: db 40
-xpos: dd 62
-ypos: dd 17
+color: db 40			;current block color
+xpos: dw 26	;current block xpos
+ypos: dw 3	;current block ypos
+piecewidth: dd 4
+pieceheight: dd 1
+temp: dd 0
+oldisrtimer:  dd 0
+oldisrkeyboard: dd 0
+tickcount: dw 0
+totaltimer: dw 0
+gameover: db 0
+reachdown: dw 0
+seconds: dw 0
+minutes: dw 0
+
+
+
+
+
+
+
+
+kbisr: 
+push ax
+push es
+in al, 0x60 ; read a char from keyboard port
+cmp al, 0x4D ; is the right key pressed
+jne nextcmp ; no, try next comparison
+call move_right
+jmp nomatch ; leave interrupt routine
+nextcmp: 
+cmp al, 0x4B ; is the left key pressed
+jne nextcmp2 ; no, leave interrupt routine
+call move_left
+
+nextcmp2:
+cmp al, 0x50
+jne nomatch
+call move_down
+nomatch: 
+mov al, 0x20
+out 0x20, al
+pop es
+pop ax
+iret 
+
+
+
+printnum: 
+push bp
+mov bp, sp
+push es
+push ax
+push bx
+push cx
+push dx
+push di
+mov ax, 0xb800
+mov es, ax 
+mov ax, [bp+4] 
+mov bx, 10 
+mov cx, 0
+nextdigit: 
+mov dx, 0 
+div bx 
+add dl, 0x30 
+push dx
+inc cx 
+cmp ax, 0
+jnz nextdigit 
+mov di, [bp+6]
+nextpos: pop dx 
+mov dh, 0x07 
+mov [es:di], dx
+add di, 2 
+loop nextpos 
+pop di
+pop dx
+pop cx
+pop bx
+pop ax 
+pop es
+pop bp
+ret 4
+ 
+nextminute:
+inc word [minutes]
+mov word [seconds],0
+push 1730
+push word [minutes]
+call printnum
+jmp _jmpback
+
+nextsecond:
+
+inc word [seconds]
+push 1740
+push word [seconds]
+call printnum
+mov word [cs:totaltimer],0
+jmp jmpback
+
+
+timer: 
+push ax
+inc word [cs:tickcount]; increment tick count
+inc word [cs:totaltimer] ;inc total time
+
+cmp word [cs:totaltimer], 18
+jge nextsecond
+jmpback:
+cmp word [seconds], 59
+jge nextminute
+_jmpback:
+
+
+cmp word [cs:totaltimer], 800
+jne skip5
+
+mov byte [cs:gameover], 1
+
+
+skip5:
+cmp word [cs:tickcount], 6
+
+
+jne skip4
+mov word [cs:tickcount], 0
+call move_down
+
+skip4:
+
+;push word [cs:tickcount]
+;call printnum ; print tick count
+
+
+
+end:
+mov al, 0x20
+out 0x20, al ; end of interrupt
+pop ax
+iret ; return from interrupt
+
 
 clearscreen:
 push es
@@ -217,16 +357,7 @@ inc si
 cmp si,5
 jbe time_area
 
-mov ax,65
-push ax
-mov ax,10
-push ax
-mov ax,07                 ;sample time
-push ax
-mov ax,time
-push ax
-push 5
-call print
+
 
 
 pop si
@@ -237,7 +368,11 @@ pop es
 ret
 
 
-shape1:
+
+
+
+draw_shape:
+
 push bp
 mov bp, sp
 push ax
@@ -256,150 +391,208 @@ mov al, [shape]
 mov ah, [bp+8] ;attribute
 
 
-mov cx, 12 
-lineloop:
+mov cx, 8 
+lineloopZ:
 
 mov [es:di], ax
 add di, 2
 
-loop lineloop
+loop lineloopZ
 
-add di, 136
-
-mov cx, 12
-lineloop2:
-
-mov [es:di], ax
-add di, 2
-
-loop lineloop2
-
-add di, 136
-
-mov cx, 4
-lineloop3:
-
-mov [es:di], ax
-add di, 2
-
-loop lineloop3
-
-add di, 152
-
-mov cx, 4
-lineloop4:
-
-mov [es:di], ax
-add di, 2
-
-loop lineloop4
 
 pop cx
 pop di
 pop es
 pop ax
 pop bp
-ret
+ret 6
 
-
-shape2:
-
+move_left:
 push bp
 mov bp, sp
 push ax
-push es
-push di
-push cx
 
-mov ax, 0xb800
-mov es, ax
-mov al, 80
-mul byte [bp+4] ;ypos
-add ax, [bp+6] ;xpos
-shl ax, 1
-mov di, ax
-mov al, [shape]
-mov ah, [bp+8] ;attribute
+mov ax, 00			;att
+push ax
+mov ax, [xpos]
+push ax,
+mov ax, [ypos]
+push ax
+call draw_shape
 
-xor bx, bx
-mov bx, 8
-tallloop:
+mov ax, [color]
+push ax
+mov ax, [xpos]
 
-mov cx, 4 
-lineloopB:
+cmp ax, 5
+je skip2
 
-mov [es:di], ax
-add di, 2
+cmp ax, 6
+je skip2
 
-loop lineloopB
+sub ax, 2
+mov [xpos], ax
 
-add di, 152
+skip2:
+push ax
+mov ax, [ypos]
+push ax
+call draw_shape
+
+
+pop ax
+pop bp
+ret 
+
+
+
+move_right:
+push bp
+mov bp, sp
+push ax
+
+mov ax, 00
+push ax
+mov ax, [xpos]
+push ax,
+mov ax, [ypos]
+push ax
+call draw_shape
+
+mov ax, [color]
+push ax
+mov ax, [xpos]
+
+mov bx, 40
+add bx, [piecewidth]
+
+cmp ax, bx
+je skip
+
 dec bx
-cmp bx, 0
-jne tallloop
+cmp ax, bx
+je skip
+
+add ax, 2
+
+mov [xpos], ax
+
+skip:
+
+push ax
+mov ax, [ypos]
+push ax
+call draw_shape
 
 
-
-
-
-pop cx
-pop di
-pop es
 pop ax
 pop bp
-ret
+ret 
 
 
 
-shape3:
-
+move_down:
 push bp
 mov bp, sp
 push ax
-push es
-push di
-push cx
+push bx
 
+mov ax, 00
+push ax
+mov ax, [xpos]
+push ax,
+mov ax, [ypos]
+push ax
+call draw_shape
+
+mov ax, [color]
+push ax
+mov ax, [xpos]
+mov [xpos], ax
+push ax
+mov ax, [ypos] ;ypos
+
+;check for color
+
+push ax			
+
+					
 mov ax, 0xb800
 mov es, ax
 mov al, 80
-mul byte [bp+4] ;ypos
-add ax, [bp+6] ;xpos
+mov bx, [ypos]
+add bx, [pieceheight]
+;inc bx
+
+mov [temp], bx
+
+
+mul byte [temp] ;ypos under shape
+add ax, [xpos] ;xpos
 shl ax, 1
 mov di, ax
-mov al, [shape]
-mov ah, [bp+8] ;attribute
+;add di, 4
+;add di, 320				;check the line under
 
-mov dx, 2
-linerepeat:
 
-mov cx, 16 
-lineloopC:
 
-mov [es:di], ax
-add di, 2
+;;if es:di is not black inc ax, else keep ax same, place object and call next shape
+xor ax, ax
+mov ax, [es:di]
+cmp ah, 0x00
 
-loop lineloopC
 
-add di, 128
-dec dx
-cmp dx, 0
-jne linerepeat
 
+;push ax
+;mov ah, 0x1C
+;mov al, 33
+;mov [es:di], ax
+;pop ax
 
 
 
 
+jne is_not_black
+
+;;second check
 
 
-pop cx
-pop di
-pop es
+
+
+
+black:
+mov bx, [piecewidth]
+add bx, 2
+shl bx, 1
+add di, bx
+mov ax, [es:di]
+cmp ah, 0x00
+
+
+
+
+jne is_not_black
+
+
+
+pop ax		;original ypos 
+add ax, [pieceheight]
+jmp skip3
+
+
+is_not_black:
+pop ax
+mov word [reachdown], 1
+
+skip3:
+mov [ypos], ax
+push ax
+call draw_shape
+
+pop bx
 pop ax
 pop bp
-ret
-
-
+ret 
 
 
 
@@ -408,32 +601,91 @@ start:
 call clearscreen
 call draw_play_area
 
+
+
 mov ax, [color]		;range from 10, 20, 30, 40, 50, 60, 70
 push ax
-mov ax, [xpos]
+mov ax, [xpos]		;bp+6
 push ax
-mov ax, [ypos]
-push ax
-
-call shape1
-
-mov ax, 60			;color
-push ax
-mov ax, 33			;xpos
-push ax
-mov ax, 7			;ypos
+mov ax, [ypos]		;bp+4
 push ax
 
-call shape2
+call draw_shape
 
-mov ax, 90			;color
-push ax
-mov ax, 5			;xpos
-push ax,
-mov ax, 20			;ypos
-push ax
+xor ax, ax														;save state
+mov es, ax ; point es to IVT base
+mov ax, [es:8*4]
+mov [oldisrtimer], ax ; save offset of old routine
+mov ax, [es:8*4+2]
+mov [oldisrtimer+2], ax
 
-call shape3
+xor ax, ax														;timer hook
+mov es, ax ; point es to IVT base
+cli ; disable interrupts
+mov word [es:8*4], timer; store offset at n*4
+mov [es:8*4+2], cs ; store segment at n*4+2
+sti 
+
+xor ax, ax														;save state
+mov es, ax ; point es to IVT base
+mov ax, [es:9*4]
+mov [oldisrkeyboard], ax ; save offset of old routine
+mov ax, [es:9*4+2]
+mov [oldisrkeyboard+2], ax
+
+xor ax, ax														;keyboard hook
+mov es, ax ; point es to IVT base
+cli ; disable interrupts
+mov word [es:9*4], kbisr; store offset at n*4
+mov [es:9*4+2], cs ; store segment at n*4+2
+sti 
+
+
+
+mainloop: 	;game main loop
+
+pieceloop:
+
+
+
+
+
+
+
+
+cmp byte [reachdown], 1
+jne pieceloop
+
+
+mov word [xpos], 26
+mov word [ypos], 3
+mov word [reachdown], 0
+jmp pieceloop
+
+
+
+call draw_shape
+
+
+cmp byte [gameover], 1
+jne mainloop
+
+
+
+mov ax, [oldisrtimer] ; read old offset in ax
+mov bx, [oldisrtimer+2] ; read old segment in bx
+cli ; disable interrupts
+mov [es:8*4], ax ; restore old offset from ax
+mov [es:8*4+2], bx ; restore old segment from bx
+sti ; enable interrupts
+
+
+mov ax, [oldisrkeyboard] ; read old offset in ax
+mov bx, [oldisrkeyboard+2] ; read old segment in bx
+cli ; disable interrupts
+mov [es:9*4], ax ; restore old offset from ax
+mov [es:9*4+2], bx ; restore old segment from bx
+sti ; enable interrupts
 
 
 mov ax, 0x4c00
