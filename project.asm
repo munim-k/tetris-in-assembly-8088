@@ -11,8 +11,8 @@ shape: db ' '
 color: db 40			;current block color
 xpos: dw 26	;current block xpos
 ypos: dw 3	;current block ypos
-piecewidth: dd 4
-pieceheight: dd 1
+piecewidth: dw 3
+pieceheight: dw 3
 temp: dd 0
 oldisrtimer:  dd 0
 oldisrkeyboard: dd 0
@@ -22,10 +22,17 @@ gameover: db 0
 reachdown: dw 0
 seconds: dw 0
 minutes: dw 0
+randNum: db 0
+currentshape: dw 0
 
 
-
-
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;shapes generation data;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+shape1: dw 0x40,0x40,0x00,0x00,0x00,0x00,0x40,0x40,0x00,0x00,0x00,0x00,0x40,0x40,0x40,0x40,0x40,0x40,0x03,0x03  ;L shape
+shape2: dw 0x40,0x40,0x40,0x40,0x40,0x40,0x40,0x40,0x40,0x40,0x40,0x40,0x00,0x00,0x00,0x00,0x00,0x00,0x04,0x04  ;horizontal rectangle
+shape3: dw 0x40,0x00,0x00,0x00,0x00,0x00,0x40,0x00,0x00,0x00,0x00,0x00,0x40,0x00,0x00,0x00,0x00,0x00,0x05,0x05  ;vertical straight
+shape4: dw 0x40,0x40,0x40,0x40,0x40,0x40,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x06,0x06  ;horizontal straight
+tempcounter: dw 0
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
 
@@ -54,7 +61,22 @@ pop es
 pop ax
 iret 
 
-
+randGen:
+push bp
+mov bp, sp
+push cx
+push dx
+push ax
+rdtsc                   
+xor dx,dx             
+mov cx, [bp + 4]
+div cx                 
+mov [randNum], dl      
+pop ax
+pop dx
+pop cx
+pop bp
+ret 2
 
 printnum: 
 push bp
@@ -367,15 +389,12 @@ pop ax
 pop es
 ret
 
-
-
-
-
-draw_shape:
-
+draw_black_shape:
 push bp
 mov bp, sp
 push ax
+push bx
+push si
 push es
 push di
 push cx
@@ -387,22 +406,82 @@ mul byte [bp+4] ;ypos
 add ax, [bp+6] ;xpos
 shl ax, 1
 mov di, ax
-mov al, [shape]
-mov ah, [bp+8] ;attribute
-
-
-mov cx, 8 
+mov al, ' '
+mov ah,40h ;attribute
+mov word [tempcounter],0
+mov si,0
+mov bx,[bp+8]
+_main_black_loop:
+mov cx, 6
 lineloopZ:
-
+mov ah,[bx+si]
+add si,2
+cmp ah,0x00
+je dontprint
+mov ah,0x00
 mov [es:di], ax
+dontprint:
 add di, 2
-
 loop lineloopZ
-
+add di,148
+inc word [tempcounter]
+cmp word [tempcounter],2
+jbe _main_black_loop
 
 pop cx
 pop di
 pop es
+pop si
+pop bx
+pop ax
+pop bp
+ret 6
+
+
+
+draw_shape:
+push bp
+mov bp, sp
+push ax
+push bx
+push si
+push es
+push di
+push cx
+
+mov ax, 0xb800
+mov es, ax
+mov al, 80
+mul byte [bp+4] ;ypos
+add ax, [bp+6] ;xpos
+shl ax, 1
+mov di, ax
+mov al, ' '
+mov ah,40h ;attribute
+mov word [tempcounter],0
+mov si,0
+mov bx,[bp+8]
+_mainloop:
+mov cx, 6
+lineloopin:
+mov ah,[bx+si]
+add si,2
+cmp ah,0x00
+je dontprint_
+mov [es:di], ax
+dontprint_:
+add di, 2
+loop lineloopin
+add di,148
+inc word [tempcounter]
+cmp word [tempcounter],2
+jbe _mainloop
+
+pop cx
+pop di
+pop es
+pop si
+pop bx
 pop ax
 pop bp
 ret 6
@@ -412,15 +491,15 @@ push bp
 mov bp, sp
 push ax
 
-mov ax, 00			;att
+mov ax, [currentshape]	;att
 push ax
 mov ax, [xpos]
 push ax,
 mov ax, [ypos]
 push ax
-call draw_shape
+call draw_black_shape
 
-mov ax, [color]
+mov ax, [currentshape]
 push ax
 mov ax, [xpos]
 
@@ -463,15 +542,15 @@ push bp
 mov bp, sp
 push ax
 
-mov ax, 00
+mov ax, [currentshape]
 push ax
 mov ax, [xpos]
 push ax,
 mov ax, [ypos]
 push ax
-call draw_shape
+call draw_black_shape
 
-mov ax, [color]
+mov ax, [currentshape]
 push ax
 mov ax, [xpos]
 
@@ -483,7 +562,9 @@ add ax, [xpos] ;xpos
 add ax,[piecewidth]
 shl ax, 1
 mov di, ax
-add di,10
+mov al,'R'
+mov ah,00001111b
+mov [es:di],ax
 xor ax, ax
 mov ax, [es:di]
 cmp ah, 0x00
@@ -495,7 +576,6 @@ add ax, 2
 mov [xpos], ax
 
 skip:
-
 mov ax, [xpos]
 push ax
 mov ax, [ypos]
@@ -515,15 +595,15 @@ mov bp, sp
 push ax
 push bx
 
-mov ax, 00
+mov ax, [currentshape]
 push ax
 mov ax, [xpos]
 push ax,
 mov ax, [ypos]
 push ax
-call draw_shape
+call draw_black_shape
 
-mov ax, [color]
+mov ax, [currentshape]
 push ax
 mov ax, [xpos]
 mov [xpos], ax
@@ -553,7 +633,9 @@ mov di, ax
 ;add di, 320				;check the line under
 
 
-
+; mov al,'R'
+; mov ah,00001111b
+; mov [es:di],ax
 ;;if es:di is not black inc ax, else keep ax same, place object and call next shape
 xor ax, ax
 mov ax, [es:di]
@@ -573,28 +655,17 @@ cmp ah, 0x00
 jne is_not_black
 
 ;;second check
-
-
-
-
-
 black:
 mov bx, [piecewidth]
-add bx, 3
 shl bx, 1
 add di, bx
 mov ax, [es:di]
 cmp ah, 0x00
 
-
-
-
 jne is_not_black
 
-
-
 pop ax		;original ypos 
-add ax, [pieceheight]
+add ax, 1
 jmp skip3
 
 
@@ -619,9 +690,49 @@ start:
 call clearscreen
 call draw_play_area
 
+push 4
+call randGen
+mov byte [randNum],0
+
+cmp byte [randNum],3
+jge setshape4
+cmp byte [randNum],2
+je setshape3
+cmp byte [randNum],1
+je setshape2
+cmp byte [randNum],0
+je setshape1
+setshape1:
+mov ax,shape1
+jmp shapedecided
+setshape2:
+mov ax,shape2
+jmp shapedecided
+setshape3:
+mov ax,shape3
+jmp shapedecided
+setshape4:
+mov ax,shape4
+jmp shapedecided
 
 
-mov ax, [color]		;range from 10, 20, 30, 40, 50, 60, 70
+
+shapedecided:
+mov word [currentshape],ax
+
+mov bx,[currentshape+38]
+push 0
+push bx
+call printnum
+mov word [piecewidth],bx
+mov bx,[currentshape+40]
+
+push 4
+push bx
+call printnum
+mov word [pieceheight],bx
+
+
 push ax
 mov ax, [xpos]		;bp+6
 push ax
@@ -629,6 +740,14 @@ mov ax, [ypos]		;bp+4
 push ax
 
 call draw_shape
+
+; push 0
+; push word [pieceheight]
+; call printnum
+
+; push 4
+; push word [piecewidth]
+; call printnum
 
 xor ax, ax														;save state
 mov es, ax ; point es to IVT base
@@ -666,11 +785,6 @@ pieceloop:
 
 
 
-
-
-
-
-
 cmp byte [reachdown], 1
 jne pieceloop
 
@@ -682,7 +796,7 @@ jmp pieceloop
 
 
 
-call draw_shape
+;call draw_shape
 
 
 cmp byte [gameover], 1
