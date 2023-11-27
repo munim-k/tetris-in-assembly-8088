@@ -1,19 +1,18 @@
 org 100h
 jmp start
 
-game_over_text: db 'GAME OVER'
+
 next_shape: db 'NEXT SHAPE'
-score_text: db 'SCORE:'
+score_text: db 'SCORE'
 score: db '6969'
-time_text: db 'TIME:'
+time_text: db 'TIME'
 time: db '04:44'
 shape: db ' '
-<<<<<<< HEAD
 color: db 40			;current block color
 xpos: dw 26	;current block xpos
 ypos: dw 3	;current block ypos
-piecewidth: dd 4
-pieceheight: dd 1
+piecewidth: dw 3
+pieceheight: dw 3
 temp: dd 0
 oldisrtimer:  dd 0
 oldisrkeyboard: dd 0
@@ -21,20 +20,19 @@ tickcount: dw 0
 totaltimer: dw 0
 gameover: db 0
 reachdown: dw 0
-=======
-color: db 40
-xpos: dd 62
-ypos: dd 17
-oldisr: dd 0 
-tickcount: dw 0
->>>>>>> 6abc8d829e184dca5d1dc7c75b4ca67382981f52
 seconds: dw 0
 minutes: dw 0
+randNum: db 0
+currentshape: dw 0
 
 
-<<<<<<< HEAD
-
-
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;shapes generation data;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+shape1: dw 0x00,0x00,0x00,0x00,0x00,0x00,0x40,0x40,0x00,0x00,0x00,0x00,0x40,0x40,0x40,0x40,0x40,0x40  ;L shape
+shape2: dw 0x60,0x60,0x60,0x60,0x60,0x60,0x60,0x60,0x60,0x60,0x60,0x60,0x00,0x00,0x00,0x00,0x00,0x00  ;horizontal rectangle
+shape3: dw 0x20,0x20,0x00,0x00,0x00,0x00,0x20,0x20,0x00,0x00,0x00,0x00,0x20,0x20,0x00,0x00,0x00,0x00  ;vertical straight
+shape4: dw 0x10,0x10,0x10,0x10,0x10,0x10,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00  ;horizontal straight
+tempcounter: dw 0
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
 
@@ -63,7 +61,20 @@ pop es
 pop ax
 iret 
 
-
+randGen:
+push bp
+mov bp, sp
+push cx
+push dx
+rdtsc                  
+xor dx,dx               
+mov cx, [bp + 4]
+div cx                  
+mov byte [randNum], dl      
+pop dx
+pop cx
+pop bp
+ret 2
 
 printnum: 
 push bp
@@ -101,62 +112,6 @@ pop ax
 pop es
 pop bp
 ret 4
-=======
-kbisr: 
-push ax
- push es
- mov ax, 0xb800
- mov es, ax 
- in al, 0x60 
- cmp al, 0x4b 
- jne nextcmp 
- mov byte [es:0], 'L' 
- jmp nomatch 
-nextcmp:
- cmp al, 0x4d 
- jne nomatch
- mov byte [es:0], 'R' 
-nomatch:
- pop es
- pop ax
- jmp far [cs:oldisr] 
-
-printnum: 
-push bp
- mov bp, sp
- push es
- push ax
- push bx
- push cx
- push dx
- push di
- mov ax, 0xb800
- mov es, ax 
- mov ax, [bp+4] 
- mov bx, 10 
- mov cx, 0
-nextdigit: mov dx, 0 
- div bx 
- add dl, 0x30 
- push dx
- inc cx 
- cmp ax, 0
- jnz nextdigit 
- mov di, [bp+6]
-nextpos: pop dx 
- mov dh, 0x07 
- mov [es:di], dx
- add di, 2 
- loop nextpos 
- pop di
- pop dx
- pop cx
- pop bx
- pop ax 
- pop es
- pop bp
- ret 4
->>>>>>> 6abc8d829e184dca5d1dc7c75b4ca67382981f52
  
 nextminute:
 inc word [minutes]
@@ -167,7 +122,6 @@ call printnum
 jmp _jmpback
 
 nextsecond:
-<<<<<<< HEAD
 
 inc word [seconds]
 push 1740
@@ -217,31 +171,6 @@ out 0x20, al ; end of interrupt
 pop ax
 iret ; return from interrupt
 
-=======
- inc word [seconds]
- push 1740
- push word [seconds]
- call printnum
- mov word [cs:tickcount],0
- jmp jmpback
-timer:
- push ax
- inc word [cs:tickcount]
- cmp word [cs:tickcount],18
- jge nextsecond
- jmpback:
- cmp word [seconds],59
- jge nextminute
- _jmpback:
-  
-  
-  
- mov al, 0x20
- out 0x20, al
- 
- pop ax
- iret 
->>>>>>> 6abc8d829e184dca5d1dc7c75b4ca67382981f52
 
 clearscreen:
 push es
@@ -298,83 +227,6 @@ pop es
 pop bp
 ret 10
 
-draw_end_screen:
-
-
-mov ax,0xb800
-mov es,ax
-
-mov di,978
-mov al,' '
-mov ah,70
-mov si,0
-end_area:
-mov cx,40
-cld                                 ;end screen area red box
-rep stosw
-add di,80
-inc si
-cmp si,10
-jbe end_area
-
-mov ax,24
-push ax
-mov ax,7
-push ax
-mov ax,11001111b
-push ax                              ;game over text
-mov ax,game_over_text
-push ax
-push 9
-call print
-
-mov ax,23
-push ax
-mov ax,10
-push ax
-mov ax,01001111b
-push ax                              ;score game over text
-mov ax,score_text
-push ax
-push 6
-call print
-
-mov ax,30
-push ax
-mov ax,10
-push ax
-mov ax,01001111b
-push ax                              ;score game over text
-mov ax,score
-push ax
-push 4
-call print
-
-mov ax,23
-push ax
-mov ax,12
-push ax
-mov ax,01001111b
-push ax                              ;time game over text
-mov ax,time_text
-push ax
-push 5
-call print
-
-mov ax,30
-push ax
-mov ax,12
-push ax
-mov ax,01001111b
-push ax                              ;time game over 
-mov ax,time
-push ax
-push 6
-call print
-
-ret
-
-
 draw_play_area:
 push es
 push ax
@@ -426,15 +278,15 @@ mov cx,23
 cld
 rep stosw
 
-mov di,490
+mov di,492
 mov al,' '
 mov ah,0
 mov si,0
 play_area:
-mov cx,47
+mov cx,44
 cld                                 ;play area black box
 rep stosw
-add di,66
+add di,72
 inc si
 cmp si,18
 jbe play_area
@@ -525,20 +377,7 @@ inc si
 cmp si,5
 jbe time_area
 
-<<<<<<< HEAD
 
-=======
-; mov ax,65
-; push ax
-; mov ax,10
-; push ax
-; mov ax,07                 ;sample time
-; push ax
-; mov ax,time
-; push ax
-; push 5
-; call print
->>>>>>> 6abc8d829e184dca5d1dc7c75b4ca67382981f52
 
 
 pop si
@@ -548,15 +387,12 @@ pop ax
 pop es
 ret
 
-
-
-
-
-draw_shape:
-
+draw_black_shape:
 push bp
 mov bp, sp
 push ax
+push bx
+push si
 push es
 push di
 push cx
@@ -568,22 +404,82 @@ mul byte [bp+4] ;ypos
 add ax, [bp+6] ;xpos
 shl ax, 1
 mov di, ax
-mov al, [shape]
-mov ah, [bp+8] ;attribute
-
-
-mov cx, 8 
+mov al, ' '
+mov ah,40h ;attribute
+mov word [tempcounter],0
+mov si,0
+mov bx,[bp+8]
+_main_black_loop:
+mov cx, 6
 lineloopZ:
-
+mov ah,[bx+si]
+add si,2
+cmp ah,0x00
+je dontprint
+mov ah,0x00
 mov [es:di], ax
+dontprint:
 add di, 2
-
 loop lineloopZ
-
+add di,148
+inc word [tempcounter]
+cmp word [tempcounter],2
+jbe _main_black_loop
 
 pop cx
 pop di
 pop es
+pop si
+pop bx
+pop ax
+pop bp
+ret 6
+
+
+
+draw_shape:
+push bp
+mov bp, sp
+push ax
+push bx
+push si
+push es
+push di
+push cx
+
+mov ax, 0xb800
+mov es, ax
+mov al, 80
+mul byte [bp+4] ;ypos
+add ax, [bp+6] ;xpos
+shl ax, 1
+mov di, ax
+mov al, ' '
+mov ah,40h ;attribute
+mov word [tempcounter],0
+mov si,0
+mov bx,[bp+8]
+_mainloop:
+mov cx, 6
+lineloopin:
+mov ah,[bx+si]
+add si,2
+cmp ah,0x00
+je dontprint_
+mov [es:di], ax
+dontprint_:
+add di, 2
+loop lineloopin
+add di,148
+inc word [tempcounter]
+cmp word [tempcounter],2
+jbe _mainloop
+
+pop cx
+pop di
+pop es
+pop si
+pop bx
 pop ax
 pop bp
 ret 6
@@ -593,28 +489,40 @@ push bp
 mov bp, sp
 push ax
 
-mov ax, 00			;att
+mov ax, [currentshape]	;att
 push ax
 mov ax, [xpos]
 push ax,
 mov ax, [ypos]
 push ax
-call draw_shape
+call draw_black_shape
 
-mov ax, [color]
+mov ax, [currentshape]
 push ax
 mov ax, [xpos]
 
-cmp ax, 5
-je skip2
 
-cmp ax, 6
-je skip2
+mov al, 80
+mov bx, [ypos]             ;left boundary check
+mov [temp], bx
 
+mul byte [temp] ;ypos under shape
+add ax, [xpos] ;xpos
+shl ax, 1
+mov di, ax
+sub di,2
+xor ax, ax
+mov ax, [es:di]
+cmp ah, 0x00
+jne skip2
+
+
+mov ax, [xpos]
 sub ax, 2
 mov [xpos], ax
 
 skip2:
+mov ax, [xpos]
 push ax
 mov ax, [ypos]
 push ax
@@ -632,34 +540,42 @@ push bp
 mov bp, sp
 push ax
 
-mov ax, 00
+mov ax, [currentshape]
 push ax
 mov ax, [xpos]
 push ax,
 mov ax, [ypos]
 push ax
-call draw_shape
+call draw_black_shape
 
-mov ax, [color]
+mov ax, [currentshape]
 push ax
 mov ax, [xpos]
 
-mov bx, 40
-add bx, [piecewidth]
+mov al, 80
+mov bx, [ypos]             ;left boundary check
+mov [temp], bx
+mul byte [temp] ;ypos under shape
+add ax, [xpos] ;xpos
+add ax,[piecewidth]
+shl ax, 1
+mov di, ax
+add di,4
+; mov al,'L'
+; mov ah,00001111b
+; mov [es:di],ax
+xor ax, ax
+mov ax, [es:di]
+cmp ah, 0x00
+jne skip
 
-cmp ax, bx
-je skip
-
-dec bx
-cmp ax, bx
-je skip
-
+mov ax, [xpos]
 add ax, 2
 
 mov [xpos], ax
 
 skip:
-
+mov ax, [xpos]
 push ax
 mov ax, [ypos]
 push ax
@@ -678,15 +594,15 @@ mov bp, sp
 push ax
 push bx
 
-mov ax, 00
+mov ax, [currentshape]
 push ax
 mov ax, [xpos]
 push ax,
 mov ax, [ypos]
 push ax
-call draw_shape
+call draw_black_shape
 
-mov ax, [color]
+mov ax, [currentshape]
 push ax
 mov ax, [xpos]
 mov [xpos], ax
@@ -712,53 +628,51 @@ mul byte [temp] ;ypos under shape
 add ax, [xpos] ;xpos
 shl ax, 1
 mov di, ax
-;add di, 4
-;add di, 320				;check the line under
-
-
-
+		                            	;check the line under
+; mov al,'L'
+; mov ah,00001111b                  ;bounds checker
+; mov [es:di],ax
 ;;if es:di is not black inc ax, else keep ax same, place object and call next shape
 xor ax, ax
 mov ax, [es:di]
 cmp ah, 0x00
-
-
-
-;push ax
-;mov ah, 0x1C
-;mov al, 33
-;mov [es:di], ax
-;pop ax
-
-
-
-
 jne is_not_black
 
 ;;second check
-
-<<<<<<< HEAD
-
-
-
-
 black:
 mov bx, [piecewidth]
-add bx, 2
 shl bx, 1
 add di, bx
+; mov al,'R'
+; mov ah,00001111b
+; mov [es:di],ax
 mov ax, [es:di]
 cmp ah, 0x00
-
-
-
-
 jne is_not_black
 
+thirdcheck:
+cmp word [piecewidth],5
+jne pass
+sub di,4
+; mov al,'M'
+; mov ah,00001111b                  ;bounds checker
+; mov [es:di],ax
+mov ax, [es:di]
+cmp ah, 0x00
+jne is_not_black
+sub di,2
+; mov al,'M'
+; mov ah,00001111b                  ;bounds checker
+; mov [es:di],ax
+mov ax, [es:di]
+cmp ah, 0x00
+jne is_not_black
+ 
 
 
+pass:
 pop ax		;original ypos 
-add ax, [pieceheight]
+add ax, 1
 jmp skip3
 
 
@@ -778,46 +692,70 @@ ret
 
 
 
-=======
-pop cx
-pop di
-pop es
-pop ax
-pop bp
+
+assignshape:
+cmp byte [randNum],3
+jge setshape4
+cmp byte [randNum],2
+je setshape3
+cmp byte [randNum],1
+je setshape2
+cmp byte [randNum],0
+je setshape1
+setshape1:
+mov ax,shape1
+mov word [piecewidth],5
+mov word [pieceheight],2
+jmp shapedecided
+setshape2:
+mov ax,shape2
+mov word [piecewidth],5
+mov word [pieceheight],2
+jmp shapedecided
+setshape3:
+mov ax,shape3
+mov word [piecewidth],1
+mov word [pieceheight],3
+jmp shapedecided
+setshape4:
+mov ax,shape4
+mov word [piecewidth],5
+mov word [pieceheight],1
+jmp shapedecided
+
+shapedecided:
+
 ret
->>>>>>> 6abc8d829e184dca5d1dc7c75b4ca67382981f52
 
 start:
 call clearscreen
-xor ax, ax
- mov es, ax ; point es to IVT base
- cli ; disable interrupts
- mov word [es:8*4], timer; store offset at n*4
- mov [es:8*4+2], cs ; store segment at n*4+2
- sti
-
- xor ax, ax
- mov es, ax 
- mov ax, [es:9*4]
- mov [oldisr], ax 
- mov ax, [es:9*4+2]
- mov [oldisr+2], ax 
- cli 
- mov word [es:9*4], kbisr 
- mov [es:9*4+2], cs 
- sti 
 call draw_play_area
 
 
 
-mov ax, [color]		;range from 10, 20, 30, 40, 50, 60, 70
-push ax
-mov ax, [xpos]		;bp+6
-push ax
-mov ax, [ypos]		;bp+4
-push ax
 
-call draw_shape
+
+
+
+
+
+
+
+; push ax
+; mov ax, [xpos]		;bp+6
+; push ax
+; mov ax, [ypos]		;bp+4
+; push ax
+
+; call draw_shape
+
+; push 0
+; push word [pieceheight]
+; call printnum
+
+; push 4
+; push word [piecewidth]
+; call printnum
 
 xor ax, ax														;save state
 mov es, ax ; point es to IVT base
@@ -840,7 +778,6 @@ mov [oldisrkeyboard], ax ; save offset of old routine
 mov ax, [es:9*4+2]
 mov [oldisrkeyboard+2], ax
 
-<<<<<<< HEAD
 xor ax, ax														;keyboard hook
 mov es, ax ; point es to IVT base
 cli ; disable interrupts
@@ -849,6 +786,12 @@ mov [es:9*4+2], cs ; store segment at n*4+2
 sti 
 
 
+push 4
+call randGen
+;mov word [randNum],3
+call assignshape
+
+mov word [currentshape],ax
 
 mainloop: 	;game main loop
 
@@ -856,14 +799,13 @@ pieceloop:
 
 
 
-
-
-
-
-
 cmp byte [reachdown], 1
 jne pieceloop
 
+push 4
+call randGen
+call assignshape
+mov word [currentshape],ax
 
 mov word [xpos], 26
 mov word [ypos], 3
@@ -872,7 +814,7 @@ jmp pieceloop
 
 
 
-call draw_shape
+;call draw_shape
 
 
 cmp byte [gameover], 1
@@ -895,10 +837,6 @@ mov [es:9*4], ax ; restore old offset from ax
 mov [es:9*4+2], bx ; restore old segment from bx
 sti ; enable interrupts
 
-=======
-call shape3
-;call draw_end_screen                         ;call subroutine to end game
->>>>>>> 6abc8d829e184dca5d1dc7c75b4ca67382981f52
 
 mov ax, 0x4c00
 int 0x21
