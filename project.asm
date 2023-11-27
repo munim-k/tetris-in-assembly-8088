@@ -27,10 +27,10 @@ currentshape: dw 0
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;shapes generation data;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-shape1: dw 0x40,0x40,0x00,0x00,0x00,0x00,0x40,0x40,0x00,0x00,0x00,0x00,0x40,0x40,0x40,0x40,0x40,0x40,0x03,0x03  ;L shape
-shape2: dw 0x40,0x40,0x40,0x40,0x40,0x40,0x40,0x40,0x40,0x40,0x40,0x40,0x00,0x00,0x00,0x00,0x00,0x00,0x04,0x04  ;horizontal rectangle
-shape3: dw 0x40,0x00,0x00,0x00,0x00,0x00,0x40,0x00,0x00,0x00,0x00,0x00,0x40,0x00,0x00,0x00,0x00,0x00,0x05,0x05  ;vertical straight
-shape4: dw 0x40,0x40,0x40,0x40,0x40,0x40,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x06,0x06  ;horizontal straight
+shape1: dw 0x00,0x00,0x00,0x00,0x00,0x00,0x40,0x40,0x00,0x00,0x00,0x00,0x40,0x40,0x40,0x40,0x40,0x40  ;L shape
+shape2: dw 0x60,0x60,0x60,0x60,0x60,0x60,0x60,0x60,0x60,0x60,0x60,0x60,0x00,0x00,0x00,0x00,0x00,0x00  ;horizontal rectangle
+shape3: dw 0x20,0x20,0x00,0x00,0x00,0x00,0x20,0x20,0x00,0x00,0x00,0x00,0x20,0x20,0x00,0x00,0x00,0x00  ;vertical straight
+shape4: dw 0x10,0x10,0x10,0x10,0x10,0x10,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00  ;horizontal straight
 tempcounter: dw 0
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -66,13 +66,11 @@ push bp
 mov bp, sp
 push cx
 push dx
-push ax
-rdtsc                   
-xor dx,dx             
+rdtsc                  
+xor dx,dx               
 mov cx, [bp + 4]
-div cx                 
-mov [randNum], dl      
-pop ax
+div cx                  
+mov byte [randNum], dl      
 pop dx
 pop cx
 pop bp
@@ -562,9 +560,10 @@ add ax, [xpos] ;xpos
 add ax,[piecewidth]
 shl ax, 1
 mov di, ax
-mov al,'R'
-mov ah,00001111b
-mov [es:di],ax
+add di,4
+; mov al,'L'
+; mov ah,00001111b
+; mov [es:di],ax
 xor ax, ax
 mov ax, [es:di]
 cmp ah, 0x00
@@ -629,29 +628,14 @@ mul byte [temp] ;ypos under shape
 add ax, [xpos] ;xpos
 shl ax, 1
 mov di, ax
-;add di, 4
-;add di, 320				;check the line under
-
-
-; mov al,'R'
-; mov ah,00001111b
+		                            	;check the line under
+; mov al,'L'
+; mov ah,00001111b                  ;bounds checker
 ; mov [es:di],ax
 ;;if es:di is not black inc ax, else keep ax same, place object and call next shape
 xor ax, ax
 mov ax, [es:di]
 cmp ah, 0x00
-
-
-
-;push ax
-;mov ah, 0x1C
-;mov al, 33
-;mov [es:di], ax
-;pop ax
-
-
-
-
 jne is_not_black
 
 ;;second check
@@ -659,11 +643,34 @@ black:
 mov bx, [piecewidth]
 shl bx, 1
 add di, bx
+; mov al,'R'
+; mov ah,00001111b
+; mov [es:di],ax
 mov ax, [es:di]
 cmp ah, 0x00
-
 jne is_not_black
 
+thirdcheck:
+cmp word [piecewidth],5
+jne pass
+sub di,4
+; mov al,'M'
+; mov ah,00001111b                  ;bounds checker
+; mov [es:di],ax
+mov ax, [es:di]
+cmp ah, 0x00
+jne is_not_black
+sub di,2
+; mov al,'M'
+; mov ah,00001111b                  ;bounds checker
+; mov [es:di],ax
+mov ax, [es:di]
+cmp ah, 0x00
+jne is_not_black
+ 
+
+
+pass:
 pop ax		;original ypos 
 add ax, 1
 jmp skip3
@@ -686,14 +693,7 @@ ret
 
 
 
-start:
-call clearscreen
-call draw_play_area
-
-push 4
-call randGen
-mov byte [randNum],0
-
+assignshape:
 cmp byte [randNum],3
 jge setshape4
 cmp byte [randNum],2
@@ -704,42 +704,50 @@ cmp byte [randNum],0
 je setshape1
 setshape1:
 mov ax,shape1
+mov word [piecewidth],5
+mov word [pieceheight],2
 jmp shapedecided
 setshape2:
 mov ax,shape2
+mov word [piecewidth],5
+mov word [pieceheight],2
 jmp shapedecided
 setshape3:
 mov ax,shape3
+mov word [piecewidth],1
+mov word [pieceheight],3
 jmp shapedecided
 setshape4:
 mov ax,shape4
+mov word [piecewidth],5
+mov word [pieceheight],1
 jmp shapedecided
 
-
-
 shapedecided:
-mov word [currentshape],ax
 
-mov bx,[currentshape+38]
-push 0
-push bx
-call printnum
-mov word [piecewidth],bx
-mov bx,[currentshape+40]
+ret
 
-push 4
-push bx
-call printnum
-mov word [pieceheight],bx
+start:
+call clearscreen
+call draw_play_area
 
 
-push ax
-mov ax, [xpos]		;bp+6
-push ax
-mov ax, [ypos]		;bp+4
-push ax
 
-call draw_shape
+
+
+
+
+
+
+
+
+; push ax
+; mov ax, [xpos]		;bp+6
+; push ax
+; mov ax, [ypos]		;bp+4
+; push ax
+
+; call draw_shape
 
 ; push 0
 ; push word [pieceheight]
@@ -778,6 +786,12 @@ mov [es:9*4+2], cs ; store segment at n*4+2
 sti 
 
 
+push 4
+call randGen
+;mov word [randNum],3
+call assignshape
+
+mov word [currentshape],ax
 
 mainloop: 	;game main loop
 
@@ -788,6 +802,10 @@ pieceloop:
 cmp byte [reachdown], 1
 jne pieceloop
 
+push 4
+call randGen
+call assignshape
+mov word [currentshape],ax
 
 mov word [xpos], 26
 mov word [ypos], 3
