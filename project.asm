@@ -40,6 +40,14 @@ GameName: db 'TREETRIS'
 press_any_key: db 'Press Any Key to Play'
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+
+delay: push cx
+mov cx,0xffff
+l1: loop l1
+pop cx
+ret
+
+
 kbisr: 
 push ax
 push es
@@ -48,15 +56,24 @@ cmp al, 0x4D ; is the right key pressed
 jne nextcmp ; no, try next comparison
 call move_right
 jmp nomatch ; leave interrupt routine
+
 nextcmp: 
 cmp al, 0x4B ; is the left key pressed
 jne nextcmp2 ; no, leave interrupt routine
 call move_left
+jmp nomatch
 
 nextcmp2:
 cmp al, 0x50
-jne nomatch
+jne nextcmp3
 call move_down
+jmp nomatch
+
+nextcmp3:
+cmp al, 01
+jne nomatch
+jmp end_program
+
 nomatch: 
 mov al, 0x20
 out 0x20, al
@@ -287,8 +304,13 @@ jmp jmpback
 
 timer: 
 push ax
+cmp word [gameover], 0
+jne skipinc
 inc word [cs:tickcount]; increment tick count
 inc word [cs:totaltimer] ;inc total time
+
+
+skipinc:
 
 cmp word [cs:totaltimer], 18
 jge nextsecond
@@ -636,6 +658,12 @@ mov al,':'
 mov [es:1982],ax
 push 1984                                       ;time game over 
 mov ax,[seconds]
+push ax
+call printnum
+
+
+push 1660
+mov ax, [score_digit]
 push ax
 call printnum
 
@@ -1088,21 +1116,21 @@ sti
 
 push 5
 call randGen
-mov word [randNum],4               ;manually select first shape
+;mov word [randNum],4               ;manually select first shape
 call assignshape
 mov word [currentshape],ax
 
 
-push word [pieceheight]
-pop ax
+;push word [pieceheight]
+;pop ax
                                               ;; unexplainable phenomenon
-push word [piecewidth]
-pop ax
+;push word [piecewidth]
+;pop ax
 
 
 push 5
 call randGen
-call assignshape
+call _assignshape
 mov word [nextshape],ax
 
 mov ax,[nextshape]
@@ -1119,6 +1147,37 @@ pieceloop:
 
 cmp byte [reachdown], 1
 jne pieceloop
+
+
+
+mov al, 0b6h
+out 43h, al
+
+;load the counter 2 value for d3
+mov ax, 1fb4h
+out 42h, al
+mov al, ah
+out 42h, al
+
+;turn the speaker on
+in al, 61h
+mov ah,al
+or al, 3h
+out 61h, al
+call delay
+mov al, ah
+out 61h, al
+
+;turn the speaker on
+in al, 61h
+mov ah,al
+or al, 3h
+out 61h, al
+call delay
+mov al, ah
+out 61h, al
+
+
 call check_line_completion
 call assignshape
 mov ax,[nextshape]
